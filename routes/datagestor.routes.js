@@ -5,6 +5,9 @@ const path = require('path');
 const fs = require('fs');
 const xlsx = require('xlsx');
 const Datagestor = require('../models/datagestor.model');
+const CatalogoGenero = require('../models/catalogo.genero.model');
+const CatalogoEstatusMarital = require('../models/catalogo.estatus.marital.model');
+const CatalogoValidarEdad = require('../models/catalogo.validar.edad.model');
 
 // Crear la carpeta 'uploads' si no existe
 const uploadDir = 'uploads';
@@ -161,21 +164,41 @@ router.get('/catalog', async (req, res) => {
     try {
         const { field } = req.query;
 
-        if (!field || (field !== 'genero' && field !== 'estado_marital')) {
-            return res.status(400).json(createResponse(null, 'Parámetro de campo incorrecto. Debe ser "genero" o "estado_marital"', 400));
+        // Validar que el campo sea uno de los permitidos
+        if (!field || (field !== 'genero' && field !== 'estado_marital' && field !== 'validacion_edad')) {
+            return res.status(400).json(createResponse(null, 'Parámetro de campo incorrecto. Debe ser "genero", "estado_marital" o "validacion_edad"', 400));
         }
 
-        const filter = {};
-        filter[field] = { $ne: null, $ne: '' };
+        // Definir la colección correspondiente para cada campo
+        let collection;
+        switch (field) {
+            case 'genero':
+                collection = await CatalogoGenero.find();
+                break;
+            case 'estado_marital':
+                collection = await CatalogoEstatusMarital.find();
+                break;
+            case 'validacion_edad':
+                collection = await CatalogoValidarEdad.find();
+                break;
+            default:
+                return res.status(400).json(createResponse(null, 'Parámetro de campo incorrecto', 400));
+        }
 
-        const distinctValues = await Datagestor.distinct(field, filter);
+        // Consultar todos los valores en la colección correspondiente
+        const allValues = collection;
+        
+        if (!allValues.length) {
+            return res.status(404).json(createResponse(null, 'No se encontraron datos en la colección', 404));
+        }
 
-        res.status(200).json(createResponse(distinctValues, `Lista de valores únicos para el campo "${field}"`, 200));
+        res.status(200).json(createResponse(allValues, `Lista de valores para el campo "${field}"`, 200));
     } catch (error) {
-        console.error('Error al obtener la lista de valores únicos:', error);
-        res.status(500).json(createResponse(null, 'Error al obtener la lista de valores únicos', 500));
+        console.error('Error al obtener la lista de valores:', error);
+        res.status(500).json(createResponse(null, 'Error al obtener la lista de valores', 500));
     }
 });
+
 
 /*GUARDAR REGISTROS ===================================================*/
 router.post('/guardarRegistro', async (req, res) => {
