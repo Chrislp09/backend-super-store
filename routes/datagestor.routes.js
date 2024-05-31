@@ -150,6 +150,7 @@ router.get('/dataList', async (req, res) => {
 
 /*SABER CANTIDAD DE REGISTROS EN TABLA =================================*/ 
 router.get('/count', async (req, res) => {
+    console.log('llego  ================================')
     try {
         const count = await Datagestor.countDocuments();
         res.status(200).json(count); // Solo devolver el número de registros
